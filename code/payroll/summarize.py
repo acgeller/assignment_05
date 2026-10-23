@@ -114,5 +114,6 @@ def summarize_employees(history: pd.DataFrame) -> pd.DataFrame:
         avg_hours=("hours_worked", lambda x: round(x.mean(), 2)),
         overtime_weeks=("hours_worked", lambda x: (x > 40).sum()),
     )
+    grouped = grouped.reset_index()
     grouped = grouped.sort_values(by="employee_id").reset_index(drop=True)
     return grouped

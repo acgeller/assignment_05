@@ -45,57 +45,62 @@ Test it: pytest tests/test_pipeline.py -k app
 # What the page does NOT do: cleaning, grouping, pivoting. If you find yourself
 # writing a groupby or a pivot_table here, that logic belongs in the package.
 
-
 import streamlit as st
-import pandas as pd
-import payroll.summarize as summarize
-import payroll.reshape as reshape
 import payroll.extract as extract
- 
-st.title("Salt City Coffee Payroll Report")
+import payroll.reshape as reshape
+import payroll.summarize as summarize
+
+st.title("Salt City Coffee — Quarterly Payroll Report")
 st.write("Upload the weekly payroll exports for the quarter to see the reports.")
- 
+
 roster = extract.load_employees()
-exports = st.file_uploader("Upload payroll exports", key="exports", accept_multiple_files=True)
- 
+exports = st.file_uploader(
+    "Upload payroll exports", key="exports", accept_multiple_files=True
+)
+
 if exports:
-    history_df = summarize.build_history([extract.load_export(u) for u in exports], roster)
- 
-    # Only warn when something is actually unmatched, and cast IDs to str so
-    # the join works whether they are ints or strings.
+    frames = [extract.load_export(u) for u in exports]
+    history_df = summarize.build_history(frames, roster)
+
+    # Warn only when something is unmatched; cast IDs to str so join always works.
     unmatched = history_df["department"].isna()
     if unmatched.any():
-        missing_ids = sorted(history_df.loc[unmatched, "employee_id"].astype(str).unique())
-        st.warning(
-            "Some employee IDs are not on the roster and will be ignored in the reports: "
-            + ", ".join(missing_ids)
+        missing_ids = sorted(
+            history_df.loc[unmatched, "employee_id"].astype(str).unique()
         )
- 
+        st.warning(
+            "Some employee IDs are not on the roster and will be ignored "
+            "in the reports: " + ", ".join(missing_ids)
+        )
+
     # The reports use only the rows that matched the roster.
     history_df = history_df[~unmatched]
- 
+    if history_df.empty:
+        st.error("None of the employee IDs in these files are on the roster.")
+        st.stop()
+
     department = st.selectbox(
         "Select department",
         ["All"] + sorted(history_df["department"].unique()),
         key="department",
     )
- 
+
     data_min = history_df["pay_date"].min().date()
     data_max = history_df["pay_date"].max().date()
 
+    # When new files change the data's date range, reset the widget's stored range.
     if st.session_state.get("date_bounds") != (data_min, data_max):
         st.session_state["date_bounds"] = (data_min, data_max)
         st.session_state["dates"] = (data_min, data_max)
 
     dates = st.date_input("Select date range", key="dates")
- 
-    # While the user is mid-selection, st.date_input returns a single date
-    # (or a 1-tuple) instead of a (start, end) pair. Wait until both are chosen.
+
+    # Mid-selection, date_input returns one date instead of a (start, end) pair.
     if not isinstance(dates, (tuple, list)) or len(dates) != 2:
         st.info("Pick both a start and an end date to see the reports.")
         st.stop()
     start_date, end_date = dates
- 
+
     selected = history_df
     if department != "All":
         selected = selected[selected["department"] == department]
@@ -103,26 +108,27 @@ if exports:
         (selected["pay_date"].dt.date >= start_date)
         & (selected["pay_date"].dt.date <= end_date)
     ]
+
     if selected.empty:
         st.warning("No payroll rows match this department and date range.")
         st.stop()
- 
+
     st.subheader(f"Reports for {department} from {start_date} to {end_date}")
- 
+
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Weeks", selected["week_ending"].nunique())
     col2.metric("Employees", selected["employee_id"].nunique())
-    col3.metric("Total hours", selected["hours_worked"].sum())
+    col3.metric("Total hours", f"{selected['hours_worked'].sum():,.2f}")
     col4.metric("Total gross pay", f"${selected['gross_pay'].sum():,.2f}")
- 
+
     monthly = reshape.pay_by_month(selected)
     st.bar_chart(monthly, x="month")
- 
+
     st.dataframe(summarize.summarize_employees(selected))
     grid = reshape.hours_grid(selected)
     st.dataframe(grid)
     st.dataframe(reshape.missed_weeks(grid))
- 
+
     st.download_button(
         "Download pay by month CSV",
         data=monthly.to_csv(index=False),
