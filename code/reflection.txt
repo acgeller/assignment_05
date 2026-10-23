@@ -1,7 +1,5 @@
-Write your reflection here.
+Through this assignment, I learned how to use pandas to clean, transform, and reshape data. I learned the importance of understanding the grain of a dataset, which describes what each row represents, and the difference between long and wide data formats. I also learned how vectorized .str methods can clean text efficiently and how pd.to_datetime() with a specified format can convert values into dates. Using coerce allows invalid dates to become NaT, and the .dt accessor lets me extract information such as the month or year. These techniques helped me understand how to prepare data for analysis.
 
-See reflection.md for what makes a good reflection — be specific, use the
-terminology from this assignment (grain, long vs. wide, vectorized .str methods,
-coerce, NaT, pd.to_datetime format, .dt, concat, ignore_index, group by, named
-aggregation, reset_index, pivot_table, fill_value, melt, lineage), and make it
-actionable.
+I also learned how to combine and summarize data using concat(), ignore_index=True, groupby(), named aggregation, and reset_index(). These methods help organize data and calculate summaries by categories. Additionally, I learned how pivot_table() can transform long data into wide data, how fill_value can replace missing values in the resulting table, and how melt() can transform wide data back into long format. One area where I want more practice is understanding how each operation changes the grain, index, and structure of a DataFrame. I also want to become more confident choosing the appropriate method for different data tasks.
+
+To improve my skills, I will practice these methods using small example DataFrames and compare the results of different transformations. I will check the shape, column names, index, and grain of my data after each major step to make sure the results are correct. I also want to improve my understanding of data lineage by tracking where the data comes from and how each transformation affects the final result. These steps will help me identify errors more easily, write more organized code, and better understand the reasoning behind each pandas operation.
